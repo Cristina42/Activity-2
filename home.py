@@ -17,3 +17,38 @@ job_tasks = [
     [3, 50, 0, 59, 1, 82, 8, 67, 7, 56, 9, 96, 6, 58, 4, 81, 5, 59, 2, 96]
 ]
 
+# Creates a random population of task sequences (chromosomes).
+def create_population(pop_size):
+    print("Create Initial Population")
+    pass
+
+# Calculates the makespan for a given chromosome.
+def calculate_makespan(chromosome):
+    print("Calculate makespan")
+    pass
+
+# Selects parents using tournament selection.
+def select_parents(population, fitness_scores):
+    print("Perform Selection")
+    pass
+
+# Performs one-point crossover.
+def crossover(parent1, parent2):
+    print("Perform Crossover")
+    pass
+
+# Mutates a chromosome by swapping two tasks.
+def mutate(chromosome):
+    print("Perform Mutation")
+    pass
+
+# Runs the genetic algorithm for job-shop scheduling.
+def genetic_algorithm():
+    print("Start Genetic Algorithm")
+    pass
+
+if __name__ == "__main__":
+    print("Main: Job-Shop Scheduling Genetic Algorithm")
+    parse_input()
+    population = create_population(10) 
+    genetic_algorithm()
