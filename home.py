@@ -63,12 +63,18 @@ def crossover(parent1, parent2):
     return child1, child2
 
 child1, child2 = crossover(parents[0], parents[1])
-print(f"Step 5: Performed crossover.\n")
+
 
 # Mutates a chromosome by swapping two tasks.
 def mutate(chromosome):
-    print("Perform Mutation")
-    pass
+    if random.random() < 0.1:  # 10% mutation rate
+        i, j = random.sample(range(len(chromosome)), 2)
+        chromosome[i], chromosome[j] = chromosome[j], chromosome[i]
+    return chromosome
+
+mutated_child = mutate(child1)
+print(f"Step 6: Performed mutation.\n")
+
 
 # Runs the genetic algorithm for job-shop scheduling.
 def genetic_algorithm():
