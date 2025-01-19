@@ -1,4 +1,5 @@
 import random
+import matplotlib.pyplot as plt
 
 datasets = {
     "abz5": {
@@ -102,11 +103,24 @@ def select_parents(population, fitness_scores):
         selected.append(population[i] if fitness_scores[i] < fitness_scores[j] else population[j])
     return selected
 
-parents = select_parents(population, fitness_scores)
-print(f"Step 4: Selected parents from the population.\n")
+
+
+# Uses roulette wheel selection.
+def roulette_wheel_selection(population, fitness_scores):
+    total_fitness = sum(1 / f for f in fitness_scores)
+    probabilities = [(1 / f) / total_fitness for f in fitness_scores]
+    cumulative_probs = [sum(probabilities[:i + 1]) for i in range(len(probabilities))]
+    selected = []
+    for _ in range(len(population)):
+        r = random.random()
+        for i, prob in enumerate(cumulative_probs):
+            if r <= prob:
+                selected.append(population[i])
+                break
+    return selected
 
 # Performs one-point crossover.
-def crossover(parent1, parent2):
+def one_point_crossover(parent1, parent2):
     if random.random() > 0.8:  # 80% crossover rate
         return parent1[:], parent2[:]
     point = random.randint(1, len(parent1) - 1)
@@ -114,7 +128,19 @@ def crossover(parent1, parent2):
     child2 = parent2[:point] + [gene for gene in parent1 if gene not in parent2[:point]]
     return child1, child2
 
-child1, child2 = crossover(parents[0], parents[1])
+# Performs uniform crossover.
+def uniform_crossover(parent1, parent2):
+    if random.random() > CROSSOVER_RATE:
+        return parent1, parent2
+    child1, child2 = [], []
+    for g1, g2 in zip(parent1, parent2):
+        if random.random() < 0.5:
+            child1.append(g1)
+            child2.append(g2)
+        else:
+            child1.append(g2)
+            child2.append(g1)
+    return child1, child2
 
 
 # Mutates a chromosome by swapping two tasks.
@@ -124,7 +150,12 @@ def mutate(chromosome):
         chromosome[i], chromosome[j] = chromosome[j], chromosome[i]
     return chromosome
 
-mutated_child = mutate(child1)
+# Uses inversion mutation.
+def inversion_mutation(chromosome):
+    if random.random() < MUTATION_RATE:
+        i, j = sorted(random.sample(range(len(chromosome)), 2))
+        chromosome[i:j] = reversed(chromosome[i:j])
+    return chromosome
 
 
 # Runs the genetic algorithm for job-shop scheduling.
@@ -140,34 +171,53 @@ def genetic_algorithm():
             best_fitness = min_fitness
             best_chromosome = pop[fitnesses.index(min_fitness)]
 
-        # print(f"Generation {generation}: Best Fitness = {best_fitness}")
+        # Selection: Choose between techniques
+        selected = select_parents(pop, fitnesses)  # Default: Tournament
+        # selected = roulette_wheel_selection(pop, fitnesses)  # Uncomment to use Roulette Wheel
 
-        selected = select_parents(pop, fitnesses)
         next_pop = []
         for i in range(0, len(selected), 2):
             p1, p2 = selected[i], selected[(i + 1) % len(selected)]
-            c1, c2 = crossover(p1, p2)
-            next_pop.extend([mutate(c1), mutate(c2)])
-        pop = next_pop
+            
+            # Crossover: Choose between techniques
+            c1, c2 = one_point_crossover(p1, p2)  # Default: One-Point
+            # c1, c2 = uniform_crossover(p1, p2)  # Uncomment to use Uniform Crossover
 
+            # Mutation: Apply chosen technique
+            next_pop.append(mutate(c1))  # Default: Swap Mutation
+            next_pop.append(mutate(c2))  # Default: Swap Mutation
+            # next_pop.append(inversion_mutation(c1))  # Uncomment to use Inversion Mutation
+            # next_pop.append(inversion_mutation(c2))  # Uncomment to use Inversion Mutation
+        
+        pop = next_pop
     return best_chromosome, best_fitness
+
+# Show the Gantt chart of the best schedule.
+def plot_gantt_chart(schedule, num_machines):
+    machine_time = [0] * num_machines
+    colors = {}
+    plt.figure(figsize=(10, 6))
+
+    for job_id, machine, duration in schedule:
+        start_time = machine_time[machine]
+        plt.barh(machine, duration, left=start_time, color=colors.setdefault(job_id, f"C{job_id % 10}"), edgecolor="black")
+        plt.text(start_time + duration / 2, machine, f"job{job_id}", ha="center", va="center", color="white", fontsize=8)
+        machine_time[machine] += duration
+
+    plt.xlabel("Time")
+    plt.ylabel("Machines")
+    plt.yticks(range(num_machines), [f"Machine {i}" for i in range(num_machines)])
+    plt.title("Gantt Chart")
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     for dataset_name, dataset in datasets.items():
-        print(f"\nProcessing dataset: {dataset_name}")
-        
-        # Load dataset
         num_jobs = dataset["num_jobs"]
         num_machines = dataset["num_machines"]
         job_tasks = dataset["tasks"]
-
-        # Run the genetic algorithm
         best_schedule, best_makespan = genetic_algorithm()
 
-        # Print results for the current dataset
-        print(f"\nDataset: {dataset_name}")
-        print("Best Schedule:")
-        for task in best_schedule:
-            print(f"Job {task[0]} on Machine {task[1]}: Duration {task[2]}")
-        print(f"Optimal Makespan: {best_makespan}")
+        print(f"\nDataset: {dataset_name}\nOptimal Makespan: {best_makespan}")
+        plot_gantt_chart(best_schedule, num_machines)
 
