@@ -73,15 +73,37 @@ def mutate(chromosome):
     return chromosome
 
 mutated_child = mutate(child1)
-print(f"Step 6: Performed mutation.\n")
 
 
 # Runs the genetic algorithm for job-shop scheduling.
 def genetic_algorithm():
-    print("Start Genetic Algorithm")
-    pass
+    pop = create_population(POPULATION_SIZE)
+    best_chromosome = None
+    best_fitness = float('inf')
+
+    for generation in range(100):  # Run for 100 generations
+        fitnesses = [calculate_makespan(chromo) for chromo in pop]
+        min_fitness = min(fitnesses)
+        if min_fitness < best_fitness:
+            best_fitness = min_fitness
+            best_chromosome = pop[fitnesses.index(min_fitness)]
+
+        print(f"Generation {generation}: Best Fitness = {best_fitness}")
+
+        selected = select_parents(pop, fitnesses)
+        next_pop = []
+        for i in range(0, len(selected), 2):
+            p1, p2 = selected[i], selected[(i + 1) % len(selected)]
+            c1, c2 = crossover(p1, p2)
+            next_pop.extend([mutate(c1), mutate(c2)])
+        pop = next_pop
+
+    return best_chromosome, best_fitness
 
 if __name__ == "__main__":
-    print("Main: Job-Shop Scheduling Genetic Algorithm")
-    population = create_population(10) 
-    genetic_algorithm()
+    best_schedule, best_makespan = genetic_algorithm()
+    print("\nBest Schedule:")
+    for task in best_schedule:
+        print(f"Job {task[0]} on Machine {task[1]}: Duration {task[2]}")
+    print(f"\nOptimal Makespan: {best_makespan}")
+
