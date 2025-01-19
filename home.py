@@ -18,9 +18,17 @@ job_tasks = [
 ]
 
 # Creates a random population of task sequences (chromosomes).
-def create_population(pop_size):
-    print("Create Initial Population")
-    pass
+def create_population(population_number):
+    tasks = []
+    for job_id, job in enumerate(job_tasks):
+        for i in range(0, len(job), 2):  # Extract (machine, duration) pairs
+            tasks.append((job_id, job[i], job[i + 1]))
+    return [random.sample(tasks, len(tasks)) for _ in range(population_number)]
+
+POPULATION_SIZE = 10
+population = create_population(POPULATION_SIZE)
+print(f"Generated initial population of size {POPULATION_SIZE}.\n")
+   
 
 # Calculates the makespan for a given chromosome.
 def calculate_makespan(chromosome):
@@ -49,6 +57,5 @@ def genetic_algorithm():
 
 if __name__ == "__main__":
     print("Main: Job-Shop Scheduling Genetic Algorithm")
-    parse_input()
     population = create_population(10) 
     genetic_algorithm()
