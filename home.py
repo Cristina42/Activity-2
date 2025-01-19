@@ -55,8 +55,15 @@ print(f"Step 4: Selected parents from the population.\n")
 
 # Performs one-point crossover.
 def crossover(parent1, parent2):
-    print("Perform Crossover")
-    pass
+    if random.random() > 0.8:  # 80% crossover rate
+        return parent1[:], parent2[:]
+    point = random.randint(1, len(parent1) - 1)
+    child1 = parent1[:point] + [gene for gene in parent2 if gene not in parent1[:point]]
+    child2 = parent2[:point] + [gene for gene in parent1 if gene not in parent2[:point]]
+    return child1, child2
+
+child1, child2 = crossover(parents[0], parents[1])
+print(f"Step 5: Performed crossover.\n")
 
 # Mutates a chromosome by swapping two tasks.
 def mutate(chromosome):
