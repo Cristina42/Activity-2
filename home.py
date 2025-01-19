@@ -130,7 +130,7 @@ def one_point_crossover(parent1, parent2):
 
 # Performs uniform crossover.
 def uniform_crossover(parent1, parent2):
-    if random.random() > CROSSOVER_RATE:
+    if random.random() > 0.8:
         return parent1, parent2
     child1, child2 = [], []
     for g1, g2 in zip(parent1, parent2):
@@ -152,7 +152,7 @@ def mutate(chromosome):
 
 # Uses inversion mutation.
 def inversion_mutation(chromosome):
-    if random.random() < MUTATION_RATE:
+    if random.random() < 0.1:
         i, j = sorted(random.sample(range(len(chromosome)), 2))
         chromosome[i:j] = reversed(chromosome[i:j])
     return chromosome
