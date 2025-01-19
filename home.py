@@ -40,12 +40,18 @@ def calculate_makespan(chromosome):
     return max(machine_time)
 
 fitness_scores = [calculate_makespan(chromo) for chromo in population]
-print(f"Step 3: Calculated fitness for all chromosomes.\n")
+
 
 # Selects parents using tournament selection.
 def select_parents(population, fitness_scores):
-    print("Perform Selection")
-    pass
+    selected = []
+    for _ in range(len(population)):
+        i, j = random.sample(range(len(population)), 2)
+        selected.append(population[i] if fitness_scores[i] < fitness_scores[j] else population[j])
+    return selected
+
+parents = select_parents(population, fitness_scores)
+print(f"Step 4: Selected parents from the population.\n")
 
 # Performs one-point crossover.
 def crossover(parent1, parent2):
