@@ -2,8 +2,8 @@ import random
 
 # Import the Input Data 
 # Example instance: abz5
-number_of_jobs = 10
-number_of_machines = 10
+num_jobs = 10
+num_machines = 10
 job_tasks = [
     [4, 88, 8, 68, 6, 94, 5, 99, 1, 67, 2, 89, 9, 77, 7, 99, 0, 86, 3, 92],
     [5, 72, 3, 50, 6, 69, 4, 75, 2, 94, 8, 66, 0, 92, 1, 82, 7, 94, 9, 63],
@@ -27,13 +27,20 @@ def create_population(population_number):
 
 POPULATION_SIZE = 10
 population = create_population(POPULATION_SIZE)
-print(f"Generated initial population of size {POPULATION_SIZE}.\n")
-   
 
+   
 # Calculates the makespan for a given chromosome.
 def calculate_makespan(chromosome):
-    print("Calculate makespan")
-    pass
+    machine_time = [0] * num_machines
+    job_time = [0] * num_jobs
+    for job_id, machine, duration in chromosome:
+        start_time = max(machine_time[machine], job_time[job_id])
+        machine_time[machine] = start_time + duration
+        job_time[job_id] = start_time + duration
+    return max(machine_time)
+
+fitness_scores = [calculate_makespan(chromo) for chromo in population]
+print(f"Step 3: Calculated fitness for all chromosomes.\n")
 
 # Selects parents using tournament selection.
 def select_parents(population, fitness_scores):
