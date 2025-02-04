@@ -194,6 +194,20 @@ def uniform_crossover(parent1, parent2):
             child1.append(g2)
             child2.append(g1)
     return child1, child2
+# Mutation: The process of introducing random changes in the offspring to maintain diversity.
+# Mutates a chromosome by swapping two tasks.
+def mutate(chromosome):
+    if random.random() < 0.1:  # 10% mutation rate
+        i, j = random.sample(range(len(chromosome)), 2)
+        chromosome[i], chromosome[j] = chromosome[j], chromosome[i]
+    return chromosome
+
+# Uses inversion mutation.
+def inversion_mutation(chromosome):
+    if random.random() < 0.1:  # 10% mutation rate
+        i, j = sorted(random.sample(range(len(chromosome)), 2))
+        chromosome[i:j] = reversed(chromosome[i:j])
+    return chromosome
 
 # Small test
 jobList = create_job_tuples(datasets["abz5"]["tasks"])
@@ -228,3 +242,17 @@ offspring1, offspring2 = uniform_crossover(parents_tournament[0], parents_tourna
 print("Uniform Crossover Offspring:")
 print(offspring1)
 print(offspring2)
+
+# Apply mutation to the offspring
+mutated_offspring1 = mutate(offspring1)
+mutated_offspring2 = mutate(offspring2)
+print("Mutated Offspring (Swap):")
+print(mutated_offspring1)
+print(mutated_offspring2)
+
+# Apply inversion mutation to the offspring
+inverted_offspring1 = inversion_mutation(offspring1)
+inverted_offspring2 = inversion_mutation(offspring2)
+print("Mutated Offspring (Inversion):")
+print(inverted_offspring1)
+print(inverted_offspring2)
