@@ -169,7 +169,31 @@ def tournament_selection(population, num_machines, tournament_size=3):
     parents = [select_one_parent(), select_one_parent()]
     return parents
 
+# Crossover: The process of combining genetic information from two parents to create offspring.
+# We will do one-point crossover, where we divide the chromosomes at a random point and swap the tails.
+# And uniform crossover, where we randomly select genes from each parent to create a new chromosome.
 
+def one_point_crossover(parent1, parent2):
+    if random.random() > 0.8:  # 80% crossover rate
+        return parent1[:], parent2[:]
+    point = random.randint(1, len(parent1) - 1)
+    child1 = parent1[:point] + [gene for gene in parent2 if gene not in parent1[:point]]
+    child2 = parent2[:point] + [gene for gene in parent1 if gene not in parent2[:point]]
+    return child1, child2
+
+# Performs uniform crossover.
+def uniform_crossover(parent1, parent2):
+    if random.random() > 0.8:  # 80% crossover rate
+        return parent1, parent2
+    child1, child2 = [], []
+    for g1, g2 in zip(parent1, parent2):
+        if random.random() < 0.5:
+            child1.append(g1)
+            child2.append(g2)
+        else:
+            child1.append(g2)
+            child2.append(g1)
+    return child1, child2
 
 # Small test
 jobList = create_job_tuples(datasets["abz5"]["tasks"])
@@ -192,3 +216,15 @@ parents_tournament = tournament_selection(population, num_machines)
 print("Tournament Selection Parents:")
 for parent in parents_tournament:
     print(parent)
+
+# Perform one-point crossover on parents selected by rank selection
+offspring1, offspring2 = one_point_crossover(parents_rank[0], parents_rank[1])
+print("One-Point Crossover Offspring:")
+print(offspring1)
+print(offspring2)
+
+# Perform uniform crossover on parents selected by tournament selection
+offspring1, offspring2 = uniform_crossover(parents_tournament[0], parents_tournament[1])
+print("Uniform Crossover Offspring:")
+print(offspring1)
+print(offspring2)
