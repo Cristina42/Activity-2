@@ -100,8 +100,13 @@ def create_chromosome(tasks):
     return random.sample(tasks, len(tasks))
 
 # Function to create a population of chromosomes
-def create_population(population_size, tasks):
-    return [create_chromosome(tasks) for _ in range(population_size)]
+def create_population(population_size, tasks, num_jobs):
+    population = []
+    while len(population) < population_size:
+        chromosome = create_chromosome(tasks)
+        if is_valid_chromosome(chromosome, num_jobs):
+            population.append(chromosome)
+    return population
 
 # After we dfined the population and chromosomes, we need to make the fitness function.
 # The fitness function evaluates how good a given solution meets the scheduling criteria, 
@@ -141,20 +146,25 @@ def fitness_function(chromosome, num_machines):
 
 # Selection: The process of choosing the fittest individuals from the population 
 # to create offspring for the next generation. We need 2 parents to create a child and 
-# need to implement 2 schemas. The first one is rank selection(where we assign ranks based on 
-# the fitness score) and the second is tournament selection(where we randomly select a subset of
+# need to implement 2 schemas. The first one is roulete weel selection and the second is tournament selection(where we randomly select a subset of
 # individuals and choose the best one from that subset).
 
 # The rank selection selects two parents from the population based on their rank
 # Individuals are sorted by fitness, assigned ranks, and selected based on rank probabilities.
-def rank_selection(population, num_machines):
-    fitness_scores = [(chromosome, fitness_function(chromosome, num_machines)) for chromosome in population]
-    fitness_scores.sort(key=lambda x: x[1])
-    ranks = list(range(1, len(fitness_scores) + 1))
-    total_rank = sum(ranks)
-    selection_probs = [rank / total_rank for rank in ranks]
-    parents = random.choices([fs[0] for fs in fitness_scores], weights=selection_probs, k=2)
-    return parents
+# Uses roulette wheel selection.
+def roulette_wheel_selection(population, fitness_scores):
+    total_fitness = sum(1 / f for f in fitness_scores)
+    probabilities = [(1 / f) / total_fitness for f in fitness_scores]
+    cumulative_probs = [sum(probabilities[:i + 1]) for i in range(len(probabilities))]
+    selected = []
+    for _ in range(len(population)):
+        r = random.random()
+        for i, prob in enumerate(cumulative_probs):
+            if r <= prob:
+                selected.append(population[i])
+                break
+    return selected
+
 
 # Tournament Selection
 # This function selects two parents from the population based on tournament selection.
@@ -208,51 +218,72 @@ def inversion_mutation(chromosome):
         i, j = sorted(random.sample(range(len(chromosome)), 2))
         chromosome[i:j] = reversed(chromosome[i:j])
     return chromosome
+# Validate the chromosome by checking if each job appears the once in the chromosome
+def is_valid_chromosome(chromosome, num_jobs):
+    job_counts = [0] * num_jobs
+    for task in chromosome:
+        job_id, machine, duration = task
+        job_counts[job_id] += 1
+    return all(count == len(chromosome) // num_jobs for count in job_counts)
 
-# Small test
-jobList = create_job_tuples(datasets["abz5"]["tasks"])
+# Combine all function into the genetic algorithm
+def genetic_algorithm(datasets, num_generations, population_size, num_machines):
+    # Initialize population
+    job_tasks = datasets["abz5"]["tasks"]
+    num_jobs = datasets["abz5"]["num_jobs"]
+    tasks = create_job_tuples(job_tasks)
+    population = create_population(population_size, tasks, num_jobs)
+
+    # Evaluate the fitness of each individual in the population
+    fitness_values = [fitness_function(chromosome, num_machines) for chromosome in population]
+
+    for generation in range(num_generations):
+        new_population = []
+
+        # For each pair in the population
+        for _ in range(population_size // 2):
+            # Selection: select two individuals (c_a, c_b) from the population
+            # Uncomment the desired selection method
+            # parents = rank_selection(population, num_machines)
+            # parents = roulette_wheel_selection(population, fitness_values)
+            parents = tournament_selection(population, num_machines)
+
+            # Crossover: (c_a', c_b') <- crossover of (c_a, c_b)
+            # Uncomment the desired crossover method
+            offspring1, offspring2 = one_point_crossover(parents[0], parents[1])
+            # offspring1, offspring2 = uniform_crossover(parents[0], parents[1])
+
+            # Mutation: mutate individuals (c_a', c_b')
+            offspring1 = mutate(offspring1)
+            offspring2 = mutate(offspring2)
+            # offspring1 = inversion_mutation(offspring1)
+            # offspring2 = inversion_mutation(offspring2)
+
+            # Add offspring to the new population
+            # Validate offspring
+            if is_valid_chromosome(offspring1, num_jobs):
+                new_population.append(offspring1)
+            if is_valid_chromosome(offspring2, num_jobs):
+                new_population.append(offspring2)
+
+        # Ensure the new population size is maintained
+        while len(new_population) < population_size:
+            chromosome = create_chromosome(tasks)
+            if is_valid_chromosome(chromosome, num_jobs):
+                new_population.append(chromosome)
+
+        # Update population
+        population = new_population
+
+        # Evaluate the fitness of each individual in the new population
+        fitness_values = [fitness_function(chromosome, num_machines) for chromosome in population]
+
+        # Print the best fitness value of the current generation
+        best_fitness = min(fitness_values)
+        print(f"Generation {generation + 1}: Best Fitness (Makespan) = {best_fitness}")
+
+# Example usage
+num_generations = 100
 population_size = 10
-num_machines = 10
-population = create_population(population_size, jobList)
-# Print the population and their fitness values
-for i, chromosome in enumerate(population):
-    fitness = fitness_function(chromosome, datasets["abz5"]["num_machines"])
-    print(f"Chromosome {i+1}: {chromosome}, Fitness (Makespan): {fitness}")
-
-# Rank Selection
-parents_rank = rank_selection(population, num_machines)
-print("Rank Selection Parents:")
-for parent in parents_rank:
-    print(parent)
-
-# Tournament Selection
-parents_tournament = tournament_selection(population, num_machines)
-print("Tournament Selection Parents:")
-for parent in parents_tournament:
-    print(parent)
-
-# Perform one-point crossover on parents selected by rank selection
-offspring1, offspring2 = one_point_crossover(parents_rank[0], parents_rank[1])
-print("One-Point Crossover Offspring:")
-print(offspring1)
-print(offspring2)
-
-# Perform uniform crossover on parents selected by tournament selection
-offspring1, offspring2 = uniform_crossover(parents_tournament[0], parents_tournament[1])
-print("Uniform Crossover Offspring:")
-print(offspring1)
-print(offspring2)
-
-# Apply mutation to the offspring
-mutated_offspring1 = mutate(offspring1)
-mutated_offspring2 = mutate(offspring2)
-print("Mutated Offspring (Swap):")
-print(mutated_offspring1)
-print(mutated_offspring2)
-
-# Apply inversion mutation to the offspring
-inverted_offspring1 = inversion_mutation(offspring1)
-inverted_offspring2 = inversion_mutation(offspring2)
-print("Mutated Offspring (Inversion):")
-print(inverted_offspring1)
-print(inverted_offspring2)
+num_machines = datasets["abz5"]["num_machines"]
+genetic_algorithm(datasets, num_generations, population_size, num_machines)
