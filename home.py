@@ -189,14 +189,19 @@ def is_valid_chromosome(chromosome, num_jobs):
 # Combine all function into the genetic algorithm
 def genetic_algorithm(datasets, num_generations, population_size, num_machines):
     # Initialize population
-    job_tasks = datasets["abz5"]["tasks"]
-    num_jobs = datasets["abz5"]["num_jobs"]
+    job_tasks = datasets["la07"]["tasks"]
+    num_jobs = datasets["la07"]["num_jobs"]
     tasks = create_job_tuples(job_tasks)
     population = create_population(population_size, tasks, num_jobs)
 
     # Evaluate the fitness of each individual in the population
     fitness_values = [fitness_function(chromosome, num_machines) for chromosome in population]
-    best_fitness_values = []  
+
+    best_fitness_values = []  # Initialize the list to store the best fitness values
+    best_fitness = float('inf')
+    best_chromosome = None
+    stationary_count = 0
+
     for generation in range(num_generations):
         new_population = []
 
@@ -219,39 +224,51 @@ def genetic_algorithm(datasets, num_generations, population_size, num_machines):
             # offspring1 = inversion_mutation(offspring1)
             # offspring2 = inversion_mutation(offspring2)
 
-            # Add offspring to the new population
             # Validate offspring
             if is_valid_chromosome(offspring1, num_jobs):
                 new_population.append(offspring1)
             if is_valid_chromosome(offspring2, num_jobs):
                 new_population.append(offspring2)
-
         # Ensure the new population size is maintained
         while len(new_population) < population_size:
             chromosome = create_chromosome(tasks)
             if is_valid_chromosome(chromosome, num_jobs):
                 new_population.append(chromosome)
-
         # Update population
         population = new_population
 
         # Evaluate the fitness of each individual in the new population
         fitness_values = [fitness_function(chromosome, num_machines) for chromosome in population]
 
-        # Print the best fitness value of the current generation
-        best_fitness = min(fitness_values)
-        best_fitness_values.append(best_fitness)
-        print(f"Generation {generation + 1}: Best Fitness (Makespan) = {best_fitness}")
+        # Record the best fitness value of the current generation
+        min_fitness = min(fitness_values)
+        best_fitness_values.append(min_fitness)
+        print(f"Generation {generation + 1}: Best Fitness (Makespan) = {min_fitness}")
+
+        # Track the best chromosome
+        if min_fitness < best_fitness:
+            best_fitness = min_fitness
+            best_chromosome = population[fitness_values.index(min_fitness)]
+            stationary_count = 0
+        else:
+            stationary_count += 1
+
+        # Check for stationary state
+        if stationary_count >= 800:  
+            print("Reached stationary state.")
+            break
+
     # Plot the evolution of the best fitness values
-    plt.plot(range(1, num_generations + 1), best_fitness_values, marker='o')
+    plt.plot(range(1, len(best_fitness_values) + 1), best_fitness_values, marker='o')
     plt.title('Evolution of the Minimum Makespan')
     plt.xlabel('Generation')
     plt.ylabel('Minimum Makespan')
     plt.grid(True)
     plt.show()
 
+
 # Example usage
-num_generations = 1000
+num_generations = 5000
 population_size = 10
-num_machines = datasets["abz5"]["num_machines"]
+num_machines = datasets["la07"]["num_machines"]
 genetic_algorithm(datasets, num_generations, population_size, num_machines)
