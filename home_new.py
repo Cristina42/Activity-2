@@ -139,6 +139,38 @@ def calculate_makespan(chromosome, num_machines):
 def fitness_function(chromosome, num_machines):
     return calculate_makespan(chromosome, num_machines)
 
+# Selection: The process of choosing the fittest individuals from the population 
+# to create offspring for the next generation. We need 2 parents to create a child and 
+# need to implement 2 schemas. The first one is rank selection(where we assign ranks based on 
+# the fitness score) and the second is tournament selection(where we randomly select a subset of
+# individuals and choose the best one from that subset).
+
+# The rank selection selects two parents from the population based on their rank
+# Individuals are sorted by fitness, assigned ranks, and selected based on rank probabilities.
+def rank_selection(population, num_machines):
+    fitness_scores = [(chromosome, fitness_function(chromosome, num_machines)) for chromosome in population]
+    fitness_scores.sort(key=lambda x: x[1])
+    ranks = list(range(1, len(fitness_scores) + 1))
+    total_rank = sum(ranks)
+    selection_probs = [rank / total_rank for rank in ranks]
+    parents = random.choices([fs[0] for fs in fitness_scores], weights=selection_probs, k=2)
+    return parents
+
+# Tournament Selection
+# This function selects two parents from the population based on tournament selection.
+# A subset of individuals is randomly selected, and the best one from that subset is chosen.
+def tournament_selection(population, num_machines, tournament_size=3):
+    def select_one_parent():
+        tournament = random.sample(population, tournament_size)
+        fitness_scores = [(chromosome, fitness_function(chromosome, num_machines)) for chromosome in tournament]
+        best_individual = min(fitness_scores, key=lambda x: x[1])[0]
+        return best_individual
+
+    parents = [select_one_parent(), select_one_parent()]
+    return parents
+
+
+
 # Small test
 jobList = create_job_tuples(datasets["abz5"]["tasks"])
 population_size = 10
@@ -148,3 +180,15 @@ population = create_population(population_size, jobList)
 for i, chromosome in enumerate(population):
     fitness = fitness_function(chromosome, datasets["abz5"]["num_machines"])
     print(f"Chromosome {i+1}: {chromosome}, Fitness (Makespan): {fitness}")
+
+# Rank Selection
+parents_rank = rank_selection(population, num_machines)
+print("Rank Selection Parents:")
+for parent in parents_rank:
+    print(parent)
+
+# Tournament Selection
+parents_tournament = tournament_selection(population, num_machines)
+print("Tournament Selection Parents:")
+for parent in parents_tournament:
+    print(parent)
