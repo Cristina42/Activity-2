@@ -63,49 +63,58 @@ datasets = {
     ]
 }
 }
-
-# Load dataset
-selected_dataset = datasets["abz5"]
-num_jobs = selected_dataset["num_jobs"]
-num_machines = selected_dataset["num_machines"]
-job_tasks = selected_dataset["tasks"]
-
-# Creates a random population of task sequences (chromosomes).
-def create_population(population_number):
-    tasks = []
+# Initialize population with random schedules; each chromosome is a list of job tasks (job_id, machine, duration).
+# Function to create a list of job tuples
+def create_job_tuples(job_tasks):
+    jobList = []
     for job_id, job in enumerate(job_tasks):
-        for i in range(0, len(job), 2):  # Extract (machine, duration) pairs
-            tasks.append((job_id, job[i], job[i + 1]))
-    return [random.sample(tasks, len(tasks)) for _ in range(population_number)]
+        for i in range(0, len(job), 2):
+            jobList.append((job_id, job[i], job[i + 1]))
+    return jobList
 
-POPULATION_SIZE = 10
-population = create_population(POPULATION_SIZE)
+# Function to create a chromosome (a random permutation of tasks)
+def create_chromosome(tasks):
+    return random.sample(tasks, len(tasks))
 
-   
-# Calculates the makespan for a given chromosome.
-def calculate_makespan(chromosome):
-    machine_time = [0] * num_machines
-    job_time = [0] * num_jobs
-    for job_id, machine, duration in chromosome:
-        start_time = max(machine_time[machine], job_time[job_id])
-        machine_time[machine] = start_time + duration
-        job_time[job_id] = start_time + duration
-    return max(machine_time)
-
-fitness_scores = [calculate_makespan(chromo) for chromo in population]
+# Function to create a population of chromosomes
+def create_population(population_size, tasks, num_jobs):
+    population = []
+    while len(population) < population_size:
+        chromosome = create_chromosome(tasks)
+        if is_valid_chromosome(chromosome, num_jobs):
+            population.append(chromosome)
+    return population
 
 
-# Selects parents using tournament selection.
-def select_parents(population, fitness_scores):
-    selected = []
-    for _ in range(len(population)):
-        i, j = random.sample(range(len(population)), 2)
-        selected.append(population[i] if fitness_scores[i] < fitness_scores[j] else population[j])
-    return selected
+# The fitness function evaluates a solution by calculating the makespan, which is the total time to complete all jobs on all machines.
+def calculate_makespan(chromosome, num_machines):
+    # Initialize completion times for machines and jobs
+    machine_completion_times = [0] * num_machines
+    job_completion_times = {}
 
+    for task in chromosome:
+        job_id, machine, duration = task
 
+        # Initialize job completion time if not already done
+        if job_id not in job_completion_times:
+            job_completion_times[job_id] = 0
 
-# Uses roulette wheel selection.
+        # Determine the start time for the task
+        start_time = max(machine_completion_times[machine], job_completion_times[job_id])
+
+        # Update the completion time for the machine and the job
+        machine_completion_times[machine] = start_time + duration
+        job_completion_times[job_id] = start_time + duration
+
+    # The makespan is the maximum completion time among all machines
+    makespan = max(machine_completion_times)
+    return makespan
+
+# Function to calculate the fitness of a chromosome (using makespan directly)
+def fitness_function(chromosome, num_machines):
+    return calculate_makespan(chromosome, num_machines)
+
+# Selection involves choosing the fittest individuals to create offspring using methods like roulette wheel and tournament selection.
 def roulette_wheel_selection(population, fitness_scores):
     total_fitness = sum(1 / f for f in fitness_scores)
     probabilities = [(1 / f) / total_fitness for f in fitness_scores]
@@ -119,7 +128,21 @@ def roulette_wheel_selection(population, fitness_scores):
                 break
     return selected
 
-# Performs one-point crossover.
+
+# Tournament Selection
+# This function selects two parents from the population based on tournament selection.
+# A subset of individuals is randomly selected, and the best one from that subset is chosen.
+def tournament_selection(population, num_machines, tournament_size=3):
+    def select_one_parent():
+        tournament = random.sample(population, tournament_size)
+        fitness_scores = [(chromosome, fitness_function(chromosome, num_machines)) for chromosome in tournament]
+        best_individual = min(fitness_scores, key=lambda x: x[1])[0]
+        return best_individual
+
+    parents = [select_one_parent(), select_one_parent()]
+    return parents
+
+# Crossover combines genetic information from two parents to create offspring using one-point or uniform crossover methods.
 def one_point_crossover(parent1, parent2):
     if random.random() > 0.8:  # 80% crossover rate
         return parent1[:], parent2[:]
@@ -130,7 +153,7 @@ def one_point_crossover(parent1, parent2):
 
 # Performs uniform crossover.
 def uniform_crossover(parent1, parent2):
-    if random.random() > 0.8:
+    if random.random() > 0.8:  # 80% crossover rate
         return parent1, parent2
     child1, child2 = [], []
     for g1, g2 in zip(parent1, parent2):
@@ -141,8 +164,7 @@ def uniform_crossover(parent1, parent2):
             child1.append(g2)
             child2.append(g1)
     return child1, child2
-
-
+# Mutation: The process of introducing random changes in the offspring to maintain diversity.
 # Mutates a chromosome by swapping two tasks.
 def mutate(chromosome):
     if random.random() < 0.1:  # 10% mutation rate
@@ -152,72 +174,84 @@ def mutate(chromosome):
 
 # Uses inversion mutation.
 def inversion_mutation(chromosome):
-    if random.random() < 0.1:
+    if random.random() < 0.1:  # 10% mutation rate
         i, j = sorted(random.sample(range(len(chromosome)), 2))
         chromosome[i:j] = reversed(chromosome[i:j])
     return chromosome
+# Validate the chromosome by checking if each job appears the once in the chromosome
+def is_valid_chromosome(chromosome, num_jobs):
+    job_counts = [0] * num_jobs
+    for task in chromosome:
+        job_id, machine, duration = task
+        job_counts[job_id] += 1
+    return all(count == len(chromosome) // num_jobs for count in job_counts)
 
+# Combine all function into the genetic algorithm
+def genetic_algorithm(datasets, num_generations, population_size, num_machines):
+    # Initialize population
+    job_tasks = datasets["abz5"]["tasks"]
+    num_jobs = datasets["abz5"]["num_jobs"]
+    tasks = create_job_tuples(job_tasks)
+    population = create_population(population_size, tasks, num_jobs)
 
-# Runs the genetic algorithm for job-shop scheduling.
-def genetic_algorithm():
-    pop = create_population(POPULATION_SIZE)
-    best_chromosome = None
-    best_fitness = float('inf')
+    # Evaluate the fitness of each individual in the population
+    fitness_values = [fitness_function(chromosome, num_machines) for chromosome in population]
+    best_fitness_values = []  
+    for generation in range(num_generations):
+        new_population = []
 
-    for generation in range(100):  # Run for 100 generations
-        fitnesses = [calculate_makespan(chromo) for chromo in pop]
-        min_fitness = min(fitnesses)
-        if min_fitness < best_fitness:
-            best_fitness = min_fitness
-            best_chromosome = pop[fitnesses.index(min_fitness)]
+        # For each pair in the population
+        for _ in range(population_size // 2):
+            # Selection: select two individuals (c_a, c_b) from the population
+            # Uncomment the desired selection method
+            # parents = rank_selection(population, num_machines)
+            # parents = roulette_wheel_selection(population, fitness_values)
+            parents = tournament_selection(population, num_machines)
 
-        # Selection: Choose between techniques
-        selected = select_parents(pop, fitnesses)  # Default: Tournament
-        # selected = roulette_wheel_selection(pop, fitnesses)  # Uncomment to use Roulette Wheel
+            # Crossover: (c_a', c_b') <- crossover of (c_a, c_b)
+            # Uncomment the desired crossover method
+            offspring1, offspring2 = one_point_crossover(parents[0], parents[1])
+            # offspring1, offspring2 = uniform_crossover(parents[0], parents[1])
 
-        next_pop = []
-        for i in range(0, len(selected), 2):
-            p1, p2 = selected[i], selected[(i + 1) % len(selected)]
-            
-            # Crossover: Choose between techniques
-            c1, c2 = one_point_crossover(p1, p2)  # Default: One-Point
-            # c1, c2 = uniform_crossover(p1, p2)  # Uncomment to use Uniform Crossover
+            # Mutation: mutate individuals (c_a', c_b')
+            offspring1 = mutate(offspring1)
+            offspring2 = mutate(offspring2)
+            # offspring1 = inversion_mutation(offspring1)
+            # offspring2 = inversion_mutation(offspring2)
 
-            # Mutation: Apply chosen technique
-            next_pop.append(mutate(c1))  # Default: Swap Mutation
-            next_pop.append(mutate(c2))  # Default: Swap Mutation
-            # next_pop.append(inversion_mutation(c1))  # Uncomment to use Inversion Mutation
-            # next_pop.append(inversion_mutation(c2))  # Uncomment to use Inversion Mutation
-        
-        pop = next_pop
-    return best_chromosome, best_fitness
+            # Add offspring to the new population
+            # Validate offspring
+            if is_valid_chromosome(offspring1, num_jobs):
+                new_population.append(offspring1)
+            if is_valid_chromosome(offspring2, num_jobs):
+                new_population.append(offspring2)
 
-# Show the Gantt chart of the best schedule.
-def plot_gantt_chart(schedule, num_machines):
-    machine_time = [0] * num_machines
-    colors = {}
-    plt.figure(figsize=(10, 6))
+        # Ensure the new population size is maintained
+        while len(new_population) < population_size:
+            chromosome = create_chromosome(tasks)
+            if is_valid_chromosome(chromosome, num_jobs):
+                new_population.append(chromosome)
 
-    for job_id, machine, duration in schedule:
-        start_time = machine_time[machine]
-        plt.barh(machine, duration, left=start_time, color=colors.setdefault(job_id, f"C{job_id % 10}"), edgecolor="black")
-        plt.text(start_time + duration / 2, machine, f"job{job_id}", ha="center", va="center", color="white", fontsize=8)
-        machine_time[machine] += duration
+        # Update population
+        population = new_population
 
-    plt.xlabel("Time")
-    plt.ylabel("Machines")
-    plt.yticks(range(num_machines), [f"Machine {i}" for i in range(num_machines)])
-    plt.title("Gantt Chart")
-    plt.tight_layout()
+        # Evaluate the fitness of each individual in the new population
+        fitness_values = [fitness_function(chromosome, num_machines) for chromosome in population]
+
+        # Print the best fitness value of the current generation
+        best_fitness = min(fitness_values)
+        best_fitness_values.append(best_fitness)
+        print(f"Generation {generation + 1}: Best Fitness (Makespan) = {best_fitness}")
+    # Plot the evolution of the best fitness values
+    plt.plot(range(1, num_generations + 1), best_fitness_values, marker='o')
+    plt.title('Evolution of the Minimum Makespan')
+    plt.xlabel('Generation')
+    plt.ylabel('Minimum Makespan')
+    plt.grid(True)
     plt.show()
 
-if __name__ == "__main__":
-    for dataset_name, dataset in datasets.items():
-        num_jobs = dataset["num_jobs"]
-        num_machines = dataset["num_machines"]
-        job_tasks = dataset["tasks"]
-        best_schedule, best_makespan = genetic_algorithm()
-
-        print(f"\nDataset: {dataset_name}\nOptimal Makespan: {best_makespan}")
-        plot_gantt_chart(best_schedule, num_machines)
-
+# Example usage
+num_generations = 1000
+population_size = 10
+num_machines = datasets["abz5"]["num_machines"]
+genetic_algorithm(datasets, num_generations, population_size, num_machines)
