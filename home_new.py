@@ -236,7 +236,7 @@ def genetic_algorithm(datasets, num_generations, population_size, num_machines):
 
     # Evaluate the fitness of each individual in the population
     fitness_values = [fitness_function(chromosome, num_machines) for chromosome in population]
-
+    best_fitness_values = []  
     for generation in range(num_generations):
         new_population = []
 
@@ -280,10 +280,18 @@ def genetic_algorithm(datasets, num_generations, population_size, num_machines):
 
         # Print the best fitness value of the current generation
         best_fitness = min(fitness_values)
+        best_fitness_values.append(best_fitness)
         print(f"Generation {generation + 1}: Best Fitness (Makespan) = {best_fitness}")
+    # Plot the evolution of the best fitness values
+    plt.plot(range(1, num_generations + 1), best_fitness_values, marker='o')
+    plt.title('Evolution of the Minimum Makespan')
+    plt.xlabel('Generation')
+    plt.ylabel('Minimum Makespan')
+    plt.grid(True)
+    plt.show()
 
 # Example usage
-num_generations = 100
+num_generations = 1000
 population_size = 10
 num_machines = datasets["abz5"]["num_machines"]
 genetic_algorithm(datasets, num_generations, population_size, num_machines)
