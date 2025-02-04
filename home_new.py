@@ -103,11 +103,48 @@ def create_chromosome(tasks):
 def create_population(population_size, tasks):
     return [create_chromosome(tasks) for _ in range(population_size)]
 
+# After we dfined the population and chromosomes, we need to make the fitness function.
+# The fitness function evaluates how good a given solution meets the scheduling criteria, 
+# such as minimizing makespan=total time to complete all jobs on all machines form start to end;
+# for this part, we initialize the completion times for machines and jobs, and for each task in the chromosome,
+# we calculated  start time based on the maximum of the machine's and job's 
+# current completion times. It then updates the completion times for both the machine 
+# and the job. Finally, the makespan is calculated as the maximum completion time
+# among all machines
+
+def calculate_makespan(chromosome, num_machines):
+    # Initialize completion times for machines and jobs
+    machine_completion_times = [0] * num_machines
+    job_completion_times = {}
+
+    for task in chromosome:
+        job_id, machine, duration = task
+
+        # Initialize job completion time if not already done
+        if job_id not in job_completion_times:
+            job_completion_times[job_id] = 0
+
+        # Determine the start time for the task
+        start_time = max(machine_completion_times[machine], job_completion_times[job_id])
+
+        # Update the completion time for the machine and the job
+        machine_completion_times[machine] = start_time + duration
+        job_completion_times[job_id] = start_time + duration
+
+    # The makespan is the maximum completion time among all machines
+    makespan = max(machine_completion_times)
+    return makespan
+
+# Function to calculate the fitness of a chromosome (using makespan directly)
+def fitness_function(chromosome, num_machines):
+    return calculate_makespan(chromosome, num_machines)
+
 # Small test
 jobList = create_job_tuples(datasets["abz5"]["tasks"])
 population_size = 10
+num_machines = 10
 population = create_population(population_size, jobList)
-
-# Print the population
+# Print the population and their fitness values
 for i, chromosome in enumerate(population):
-    print(f"Chromosome {i+1}: {chromosome}")
+    fitness = fitness_function(chromosome, datasets["abz5"]["num_machines"])
+    print(f"Chromosome {i+1}: {chromosome}, Fitness (Makespan): {fitness}")
